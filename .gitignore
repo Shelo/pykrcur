@@ -1,2 +1,3 @@
 .idae/
 *.pyc
+.DS_Store

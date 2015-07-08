@@ -268,7 +268,7 @@ class Puzzle(object):
             elif group_type == MARK:
                 mark_group_i += 1
 
-                if row[mark_group_i] == group:
+                if mark_group_i < len(row) and row[mark_group_i] == group:
                     indices.add(mark_group_i)
                     used_groups.add(i)
 
@@ -287,7 +287,7 @@ class Puzzle(object):
             elif group_type == MARK:
                 mark_group_i -= 1
 
-                if row[mark_group_i] == group:
+                if mark_group_i >= 0 and row[mark_group_i] == group:
                     indices.add(mark_group_i)
 
         return indices
@@ -301,15 +301,4 @@ if __name__ == '__main__':
     _level = reader.get_level()
 
     puzzle = Puzzle(_level)
-
-    exception = None
-
-    try:
-        puzzle.start()
-    except Exception as e:
-        exception = e
-    finally:
-        puzzle.end()
-
-        if exception is not None:
-            print exception.message
+    puzzle.start()
