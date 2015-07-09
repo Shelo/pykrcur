@@ -52,7 +52,13 @@ class KRPuzzle(object):
         curses.init_pair(4, curses.COLOR_BLACK, curses.COLOR_GREEN)
         curses.init_pair(5, curses.COLOR_BLACK, curses.COLOR_YELLOW)
 
-        self.__mainloop()
+        # this block will always restore the terminal.
+        try:
+            self.__mainloop()
+        except Exception as e:
+            print e.message
+        finally:
+            self.end()
 
     def __mainloop(self):
         while self.daemon:
@@ -61,7 +67,6 @@ class KRPuzzle(object):
             self.place_cursor()
             char = self.__input()
             self.update(char)
-        self.end()
 
     def __input(self):
         char = self.win.getch()
