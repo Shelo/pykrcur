@@ -1,72 +1,69 @@
 import curses
 import sys
+import utils
 
 from src.reader import Reader
 
-NULL = 0
-MARK = 1
-DISC = 2
 
-TOP = 1
-DOWN = 2
+class KRPuzzle(object):
+    NULL = 0
+    MARK = 1
+    DISC = 2
 
-LEFT = 1
-RIGHT = 2
-
-
-def clamp(value, minimum, maximum):
-    return max(minimum, min(value, maximum))
-
-
-class Puzzle(object):
     def __init__(self, level):
         self.level = level
 
-        self.master = None
-        self.win = None
-        self.daemon = True
-        self.out = ""
+        # position of the cursor (y, x)
         self.cursor_pos = (0, 0)
+        self.master = None
+        self.daemon = True
+        self.win = None
+        self.out = ""
 
-        self.overlay_col = NULL
-        self.overlay_row = NULL
-
-        self.marks = [[NULL for i in range(level.left_height)] for j in range(level.top_width)]
+        # matrix for the marks on the puzzle.
+        self.marks = utils.new_matrix(level.width, level.height, self.NULL)
 
     def start(self):
+        """
+        Starts the game environment on the terminal using curses.
+        """
+        # setup curses stuff.
         self.master = curses.initscr()
         curses.start_color()
         curses.use_default_colors()
         curses.cbreak()
         curses.noecho()
 
+        # window dimensions.
         max_height, max_width = self.master.getmaxyx()
         width, height = self.level.size()
         width = width * 3 + 1
-        self.win = curses.newwin(height, width,
-                                 (max_height - self.level.left_height) / 2 - self.level.top_height,
-                                 (max_width - self.level.top_width * 3) / 2 - self.level.left_width * 3)
+        y = (max_height - self.level.height) / 2 - self.level.top_margin
+        x = (max_width - self.level.width * 3) / 2 - self.level.left_margin * 3
+
+        # create window for the actual game.
+        self.win = curses.newwin(height, width, y, x)
         self.win.keypad(True)
 
+        # setup theme.
         curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
         curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_CYAN)
         curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_WHITE)
         curses.init_pair(4, curses.COLOR_BLACK, curses.COLOR_GREEN)
         curses.init_pair(5, curses.COLOR_BLACK, curses.COLOR_YELLOW)
 
-        self.mainloop()
+        self.__mainloop()
 
-    def mainloop(self):
+    def __mainloop(self):
         while self.daemon:
             self.render()
             self.refresh()
             self.place_cursor()
-            char = self.input()
+            char = self.__input()
             self.update(char)
-
         self.end()
 
-    def input(self):
+    def __input(self):
         char = self.win.getch()
 
         if char == ord('q'):
@@ -75,6 +72,11 @@ class Puzzle(object):
         return char
 
     def update(self, char):
+        """
+        Updates the puzzle given the character.
+
+        :param char:    the character to emulate.
+        """
         y, x = self.cursor_pos
         if char == curses.KEY_RIGHT:
             x += 1
@@ -94,78 +96,60 @@ class Puzzle(object):
         elif char == ord('x'):
             self.discard(x, y)
 
-        elif char == ord('w'):
-            self.overlay_col = NULL if self.overlay_col == TOP else TOP
-
-        elif char == ord('s'):
-            self.overlay_col = NULL if self.overlay_col == DOWN else DOWN
-
-        elif char == ord('a'):
-            self.overlay_row = NULL if self.overlay_row == LEFT else LEFT
-
-        elif char == ord('d'):
-            self.overlay_row = NULL if self.overlay_row == RIGHT else RIGHT
-
-        x = clamp(x, 0, self.level.top_width - 1)
-        y = clamp(y, 0, self.level.left_height - 1)
+        x = self.clamp(x, 0, self.level.width - 1)
+        y = self.clamp(y, 0, self.level.height - 1)
 
         self.cursor_pos = (y, x)
 
     def mark(self, x, y):
-        self.marks[x][y] = MARK if self.marks[x][y] in (NULL, DISC) else NULL
+        self.marks[x][y] = self.MARK if self.marks[x][y] in (self.NULL, self.DISC) else self.NULL
 
     def discard(self, x, y):
-        self.marks[x][y] = DISC if self.marks[x][y] in (NULL, MARK) else NULL
+        self.marks[x][y] = self.DISC if self.marks[x][y] in (self.NULL, self.MARK) else self.NULL
 
     def place_cursor(self):
         y, x = self.cursor_pos
-        self.win.move(y + self.level.top_height, (x + self.level.left_width) * 3 + 1)
+        self.win.move(y + self.level.top_margin, (x + self.level.left_margin) * 3 + 1)
 
     def render(self):
-        self.draw_top()
-        self.draw_left()
-        self.draw_marks()
-        self.draw_overlays()
+        self.__draw_top()
+        self.__draw_left()
+        self.__draw_marks()
 
-    def draw_top(self):
-        for x in range(self.level.top_width):
+    def __draw_top(self):
+        for x in range(self.level.width):
+            complete_indices = self.get_completed_indices(self.level.get_col(x), *self.get_marks_col(x))
 
-            col = self.level.get_top_col(x)
-            types, groups = self.get_top_marks_col(x)
-
-            complete_indices = self.get_completed_indices(col, types, groups)
-
-            raw_y = 0
-            for y in range(self.level.top_height):
-                value = self.level.top[x][y]
-
+            # iterate over every column, always tracking the actual index of the value (real_y).
+            real_y = 0
+            for y, value in enumerate(self.level.top[x]):
                 if value == -1:
                     continue
 
+                # this is the default attribute for a value.
                 attributes = curses.A_NORMAL
 
-                # add underline if completed.
-                if raw_y in complete_indices:
+                # add style if completed.
+                if real_y in complete_indices:
                     attributes |= curses.color_pair(4)
 
                 str_value = str(value).center(3, ' ')
                 if x == self.cursor_pos[1]:
-                    self.addchs(y, (self.level.left_width + x) * 3, str_value, attributes | curses.A_BOLD)
+                    # draw with other style if the cursor is in this column.
+                    self.__addchs(y, (self.level.left_margin + x) * 3, str_value, attributes | curses.A_BOLD)
+
                 else:
-                    self.addchs(y, (self.level.left_width + x) * 3, str_value, attributes)
+                    self.__addchs(y, (self.level.left_margin + x) * 3, str_value, attributes)
 
-                raw_y += 1
+                real_y += 1
 
-    def draw_left(self):
-        for y in range(self.level.left_height):
+    def __draw_left(self):
+        for y in range(self.level.height):
+            complete_indices = self.get_completed_indices(self.level.get_row(y), *self.get_marks_row(y))
 
-            row = self.level.get_left_row(y)
-            types, groups = self.get_left_marks_row(y)
-
-            complete_indices = self.get_completed_indices(row, types, groups)
-
-            raw_x = 0
-            for x in range(self.level.left_width):
+            # iterate over every column, always tracking the actual index of the value (real_x).
+            real_x = 0
+            for x in range(self.level.left_margin):
                 value = self.level.left[x][y]
 
                 if value == -1:
@@ -176,83 +160,49 @@ class Puzzle(object):
                 attributes = curses.A_NORMAL
 
                 # add underline if completed.
-                if raw_x in complete_indices:
+                if real_x in complete_indices:
                     attributes |= curses.color_pair(4)
 
                 if y == self.cursor_pos[0]:
-                    self.addchs(self.level.top_height + y, x * 3, str_value, attributes | curses.A_BOLD)
+                    self.__addchs(self.level.top_margin + y, x * 3, str_value, attributes | curses.A_BOLD)
                 else:
-                    self.addchs(self.level.top_height + y, x * 3, str_value, attributes)
+                    self.__addchs(self.level.top_margin + y, x * 3, str_value, attributes)
 
-                raw_x += 1
+                real_x += 1
 
-    def draw_marks(self):
-        for x in range(self.level.top_width):
-            for y in range(self.level.left_height):
+    def __draw_marks(self):
+        for x in range(self.level.width):
+            for y in range(self.level.height):
                 value = self.marks[x][y]
 
-                pos_y, pos_x = self.level.top_height + y, (self.level.left_width + x) * 3
+                pos_y, pos_x = self.level.top_margin + y, (self.level.left_margin + x) * 3
 
-                if value == MARK:
-                    self.addchs(pos_y, pos_x, ' ' * 3, curses.color_pair(1))
+                chars = ' ' * 3
 
-                elif value == DISC:
-                    self.addchs(pos_y, pos_x, ' ' * 3, curses.color_pair(2))
+                if value == self.MARK:
+                    self.__addchs(pos_y, pos_x, chars, curses.color_pair(1))
+
+                elif value == self.DISC:
+                    self.__addchs(pos_y, pos_x, chars, curses.color_pair(2))
 
                 else:
                     if (x + y) % 2 == 0:
-                        self.addchs(pos_y, pos_x, ' ' * 3, None)
+                        self.__addchs(pos_y, pos_x, chars, None)
                     else:
-                        self.addchs(pos_y, pos_x, ' ' * 3, curses.color_pair(3))
+                        self.__addchs(pos_y, pos_x, chars, curses.color_pair(3))
 
-    def draw_overlays(self):
-        if self.overlay_col != NULL:
-            cols = self.level.get_top_col(self.cursor_pos[1])
+    def __addchs(self, y, x, chs, style):
+        """
+        Adds multiple characters at a position using the given color, or None.
 
-            _, x = self.cursor_pos
-            x *= 3
-            x += self.level.left_width * 3
-            y = self.level.top_height
-
-            margin = 0
-            if self.overlay_col == TOP:
-                for group in cols:
-                    for i in range(group):
-                        self.addchs(margin + y + i, x, ' ' * 3, curses.color_pair(5))
-                    margin += group + 1
-
-            else:
-                for group in cols[-1::-1]:
-                    for i in range(group):
-                        self.addchs(self.level.left_height + self.level.top_height - (margin + i) - 1,
-                                    x, ' ' * 3, curses.color_pair(5))
-                    margin += group + 1
-
-        if self.overlay_row != NULL:
-            rows = self.level.get_left_row(self.cursor_pos[0])
-
-            y, _ = self.cursor_pos
-            x = self.level.left_width
-            y += self.level.top_height
-
-            margin = 0
-            if self.overlay_row == LEFT:
-                for group in rows:
-                    for i in range(group):
-                        self.addchs(y, (margin + x + i) * 3, ' ' * 3, curses.color_pair(5))
-                    margin += group + 1
-
-            else:
-                for group in rows[-1::-1]:
-                    for i in range(group):
-                        self.addchs(y, (self.level.top_width + self.level.left_width) * 3 - (margin + i + 1) * 3,
-                                    ' ' * 3, curses.color_pair(5))
-                    margin += group + 1
-
-    def addchs(self, y, x, chs, color):
+        :param y:       y position.
+        :param x:       x position.
+        :param chs:     characters.
+        :param style:   style for the chars.
+        """
         for i in range(len(chs)):
-            if color is not None:
-                self.win.addch(y, x + i, ord(chs[i]), color)
+            if style is not None:
+                self.win.addch(y, x + i, ord(chs[i]), style)
             else:
                 self.win.addch(y, x + i, ord(chs[i]))
 
@@ -260,51 +210,69 @@ class Puzzle(object):
         self.master.refresh()
         self.win.refresh()
 
-    def get_left_marks_row(self, index):
-        row = []
+    def get_marks_row(self, index):
+        """
+        Returns the types and groups of the given row of marks.
 
-        for x in range(self.level.top_width):
-            row.append(self.marks[x][index])
+        For instance:
+        0, 1, 1, 2, 2, 1, 2, 0
 
-        types = []
-        groups = []
+        Will give the groups:
+        1, 2, 2, 1, 1, 1
 
-        actual_group = row[0]
+        with types:
+        0, 1, 2, 1, 2, 0
 
-        # prepare the first iteration.
-        groups.append(0)
-        types.append(actual_group)
+        This is for easy comparison.
+
+        :param index:   the index of the row.
+        :return:        types, groups
+        """
+        row = [self.marks[x][index] for x in range(self.level.width)]
+
+        actual_group = -1
+        types, groups = [], []
 
         for value in row:
             if value != actual_group:
                 actual_group = value
                 types.append(value)
                 groups.append(1)
+
             else:
                 groups[-1] += 1
 
         return types, groups
 
-    def get_top_marks_col(self, index):
-        col = []
+    def get_marks_col(self, index):
+        """
+        Returns the types and groups of the given column of marks.
 
-        for y in range(self.level.left_height):
-            col.append(self.marks[index][y])
+        For instance:
+        0, 1, 1, 2, 2, 1, 2, 0
 
-        types = []
-        groups = []
+        Will give the groups:
+        1, 2, 2, 1, 1, 1
 
-        actual_group = col[0]
+        with types:
+        0, 1, 2, 1, 2, 0
 
-        # prepare the first iteration.
-        groups.append(0)
-        types.append(actual_group)
+        This is for easy comparison.
+
+        :param index:   the index of the column.
+        :return:        types, groups
+        """
+        col = self.marks[index]
+
+        actual_group = -1
+        types, groups = [], []
 
         for value in col:
             if value != actual_group:
                 actual_group = value
                 types.append(value)
                 groups.append(1)
+
             else:
                 groups[-1] += 1
 
@@ -313,7 +281,8 @@ class Puzzle(object):
     def log(self, message):
         self.out += "%s\n" % message
 
-    def end(self):
+    @staticmethod
+    def end():
         curses.endwin()
 
     def output(self):
@@ -330,10 +299,11 @@ class Puzzle(object):
         for i, group in enumerate(groups):
             group_type = types[i]
 
-            if group_type == NULL:
-                # if the type is NULL quit trying.
+            if group_type == self.NULL:
+                # if the type is self.NULL quit trying.
                 break
-            elif group_type == MARK:
+
+            elif group_type == self.MARK:
                 mark_group_i += 1
 
                 if mark_group_i < len(row) and row[mark_group_i] == group:
@@ -348,17 +318,21 @@ class Puzzle(object):
 
             group_type = types[i]
 
-            if group_type == NULL:
-                # if the type is NULL quit trying.
+            if group_type == self.NULL:
+                # if the type is self.NULL quit trying.
                 break
 
-            elif group_type == MARK:
+            elif group_type == self.MARK:
                 mark_group_i -= 1
 
                 if mark_group_i >= 0 and row[mark_group_i] == group:
                     indices.add(mark_group_i)
 
         return indices
+
+    @staticmethod
+    def clamp(value, minimum, maximum):
+        return max(minimum, min(value, maximum))
 
 if __name__ == '__main__':
     if len(sys.argv) == 1:
@@ -368,6 +342,5 @@ if __name__ == '__main__':
 
     _level = reader.get_level()
 
-    puzzle = Puzzle(_level)
+    puzzle = KRPuzzle(_level)
     puzzle.start()
-    puzzle.output()

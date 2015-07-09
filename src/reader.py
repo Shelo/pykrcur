@@ -2,15 +2,15 @@ from src.level import *
 
 class Reader(object):
     def __init__(self, file_path):
-        self.filePath = file_path
-        self.top = []
+        self.file_path = file_path
         self.left = []
+        self.top = []
 
         # information about the level.
-        self.top_width = 0
-        self.top_height = 0
-        self.left_width = 0
-        self.left_height = 0
+        self.left_margin = 0
+        self.top_margin = 0
+        self.height = 0
+        self.width = 0
 
         self.read()
         self.info()
@@ -18,7 +18,7 @@ class Reader(object):
     def read(self):
         reading_top = True
 
-        with open(self.filePath) as data:
+        with open(self.file_path) as data:
             for line in data:
                 if line and line[0] != "=":
                     numbers = self.get_numbers(self.no_newline(line))
@@ -44,20 +44,20 @@ class Reader(object):
         return numbers
 
     def info(self):
-        self.top_height = len(self.top)
-        self.top_width = 0
+        self.top_margin = len(self.top)
+        self.width = 0
         for row in self.top:
-            if len(row) > self.top_width:
-                self.top_width = len(row)
+            if len(row) > self.width:
+                self.width = len(row)
 
-        self.left_height = len(self.left)
-        self.left_width = 0
+        self.height = len(self.left)
+        self.left_margin = 0
         for row in self.left:
-            if len(row) > self.left_width:
-                self.left_width = len(row)
+            if len(row) > self.left_margin:
+                self.left_margin = len(row)
 
     def get_level(self):
-        level = Level(self.top_width, self.top_height, self.left_width, self.left_height)
+        level = Level(self.width, self.top_margin, self.left_margin, self.height)
 
         for y, row in enumerate(self.top):
             for x, number in enumerate(row):

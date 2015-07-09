@@ -1,12 +1,14 @@
-class Level(object):
-    def __init__(self, top_width, top_height, left_width, left_height):
-        self.top_width = top_width
-        self.top_height = top_height
-        self.left_width = left_width
-        self.left_height = left_height
+import utils
 
-        self.top = [[-1 for i in range(top_height)] for j in range(top_width)]
-        self.left = [[-1 for i in range(left_height)] for j in range(left_width)]
+class Level(object):
+    def __init__(self, width, top_margin, left_margin, height):
+        self.left_margin = left_margin
+        self.top_margin = top_margin
+        self.height = height
+        self.width = width
+
+        self.left = utils.new_matrix(left_margin, height, -1)
+        self.top = utils.new_matrix(width, top_margin, -1)
 
     def add_to_top(self, x, y, value):
         self.top[x][y] = value
@@ -20,12 +22,12 @@ class Level(object):
 
         :return: a tuple of (width, height)
         """
-        return self.top_width + self.left_width, self.top_height + self.left_height
+        return self.width + self.left_margin, self.top_margin + self.height
 
-    def get_left_row(self, index):
+    def get_row(self, index):
         row = []
 
-        for x in range(self.left_width):
+        for x in range(self.left_margin):
             value = self.left[x][index]
 
             if value != -1:
@@ -33,10 +35,10 @@ class Level(object):
 
         return row
 
-    def get_top_col(self, index):
+    def get_col(self, index):
         col = []
 
-        for y in range(self.top_height):
+        for y in range(self.top_margin):
             value = self.top[index][y]
 
             if value != -1:

@@ -1,6 +1,6 @@
 from os import listdir
 from os.path import isfile, join
-from src.main import Puzzle
+from src.main import KRPuzzle
 from src.reader import Reader
 
 DIRECTORY = "levels/"
@@ -14,6 +14,6 @@ while puzzle < 0 or puzzle >= len(files):
     puzzle = int(raw_input("Enter the puzzle number: "))
 
 reader = Reader(join(DIRECTORY, files[puzzle]))
-puzzle = Puzzle(reader.get_level())
+puzzle = KRPuzzle(reader.get_level())
 puzzle.start()
 puzzle.output()
