@@ -1,7 +1,7 @@
 import curses
-from reader import Reader
 import sys
 
+from src.reader import Reader
 
 NULL = 0
 MARK = 1
@@ -113,7 +113,7 @@ class Puzzle(object):
             complete_indices = self.get_completed_indices(col, types, groups)
 
             raw_y = 0
-            for y in range(_level.top_height):
+            for y in range(self.level.top_height):
                 value = self.level.top[x][y]
 
                 if value == -1:
@@ -249,6 +249,7 @@ class Puzzle(object):
     def end(self):
         curses.endwin()
 
+    def output(self):
         print "----------- OUTPUT ------------"
         print self.out[:-1]
         print "--------- END OUTPUT ----------"
@@ -302,3 +303,4 @@ if __name__ == '__main__':
 
     puzzle = Puzzle(_level)
     puzzle.start()
+    puzzle.output()

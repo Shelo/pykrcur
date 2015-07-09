@@ -1,4 +1,4 @@
-from level import *
+from src.level import *
 
 class Reader(object):
     def __init__(self, file_path):
