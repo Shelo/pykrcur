@@ -16,3 +16,4 @@ while puzzle < 0 or puzzle >= len(files):
 reader = Reader(join(DIRECTORY, files[puzzle]))
 puzzle = Puzzle(reader.get_level())
 puzzle.start()
+puzzle.output()

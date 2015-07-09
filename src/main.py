@@ -7,6 +7,12 @@ NULL = 0
 MARK = 1
 DISC = 2
 
+TOP = 1
+DOWN = 2
+
+LEFT = 1
+RIGHT = 2
+
 
 def clamp(value, minimum, maximum):
     return max(minimum, min(value, maximum))
@@ -21,6 +27,9 @@ class Puzzle(object):
         self.daemon = True
         self.out = ""
         self.cursor_pos = (0, 0)
+
+        self.overlay_col = NULL
+        self.overlay_row = NULL
 
         self.marks = [[NULL for i in range(level.left_height)] for j in range(level.top_width)]
 
@@ -43,6 +52,7 @@ class Puzzle(object):
         curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_CYAN)
         curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_WHITE)
         curses.init_pair(4, curses.COLOR_BLACK, curses.COLOR_GREEN)
+        curses.init_pair(5, curses.COLOR_BLACK, curses.COLOR_YELLOW)
 
         self.mainloop()
 
@@ -84,6 +94,18 @@ class Puzzle(object):
         elif char == ord('x'):
             self.discard(x, y)
 
+        elif char == ord('w'):
+            self.overlay_col = NULL if self.overlay_col == TOP else TOP
+
+        elif char == ord('s'):
+            self.overlay_col = NULL if self.overlay_col == DOWN else DOWN
+
+        elif char == ord('a'):
+            self.overlay_row = NULL if self.overlay_row == LEFT else LEFT
+
+        elif char == ord('d'):
+            self.overlay_row = NULL if self.overlay_row == RIGHT else RIGHT
+
         x = clamp(x, 0, self.level.top_width - 1)
         y = clamp(y, 0, self.level.left_height - 1)
 
@@ -103,6 +125,7 @@ class Puzzle(object):
         self.draw_top()
         self.draw_left()
         self.draw_marks()
+        self.draw_overlays()
 
     def draw_top(self):
         for x in range(self.level.top_width):
@@ -181,6 +204,50 @@ class Puzzle(object):
                         self.addchs(pos_y, pos_x, ' ' * 3, None)
                     else:
                         self.addchs(pos_y, pos_x, ' ' * 3, curses.color_pair(3))
+
+    def draw_overlays(self):
+        if self.overlay_col != NULL:
+            cols = self.level.get_top_col(self.cursor_pos[1])
+
+            _, x = self.cursor_pos
+            x *= 3
+            x += self.level.left_width * 3
+            y = self.level.top_height
+
+            margin = 0
+            if self.overlay_col == TOP:
+                for group in cols:
+                    for i in range(group):
+                        self.addchs(margin + y + i, x, ' ' * 3, curses.color_pair(5))
+                    margin += group + 1
+
+            else:
+                for group in cols[-1::-1]:
+                    for i in range(group):
+                        self.addchs(self.level.left_height + self.level.top_height - (margin + i) - 1,
+                                    x, ' ' * 3, curses.color_pair(5))
+                    margin += group + 1
+
+        if self.overlay_row != NULL:
+            rows = self.level.get_left_row(self.cursor_pos[0])
+
+            y, _ = self.cursor_pos
+            x = self.level.left_width
+            y += self.level.top_height
+
+            margin = 0
+            if self.overlay_row == LEFT:
+                for group in rows:
+                    for i in range(group):
+                        self.addchs(y, (margin + x + i) * 3, ' ' * 3, curses.color_pair(5))
+                    margin += group + 1
+
+            else:
+                for group in rows[-1::-1]:
+                    for i in range(group):
+                        self.addchs(y, (self.level.top_width + self.level.left_width) * 3 - (margin + i + 1) * 3,
+                                    ' ' * 3, curses.color_pair(5))
+                    margin += group + 1
 
     def addchs(self, y, x, chs, color):
         for i in range(len(chs)):
