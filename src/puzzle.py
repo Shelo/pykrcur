@@ -121,8 +121,8 @@ class KRPuzzle(object):
             self.count_distance = not self.count_distance
             self.count_origin = tuple(self.cursor_pos)
 
-        x = self.clamp(x, 0, self.level.width - 1)
-        y = self.clamp(y, 0, self.level.height - 1)
+        x = utils.clamp(x, 0, self.level.width - 1)
+        y = utils.clamp(y, 0, self.level.height - 1)
 
         self.cursor_pos = (y, x)
 
@@ -137,12 +137,12 @@ class KRPuzzle(object):
         self.win.move(y + self.level.top_margin, (x + self.level.left_margin) * 3 + 1)
 
     def render(self):
-        self.__draw_top()
-        self.__draw_left()
-        self.__draw_marks()
-        self.__draw_status()
+        self._draw_top()
+        self._draw_left()
+        self._draw_marks()
+        self._draw_status()
 
-    def __draw_top(self):
+    def _draw_top(self):
         for x in range(self.level.width):
             complete_indices = self.get_completed_indices(self.level.get_col(x), *self.get_marks_col(x))
 
@@ -169,7 +169,7 @@ class KRPuzzle(object):
 
                 real_y += 1
 
-    def __draw_left(self):
+    def _draw_left(self):
         for y in range(self.level.height):
             complete_indices = self.get_completed_indices(self.level.get_row(y), *self.get_marks_row(y))
 
@@ -196,7 +196,7 @@ class KRPuzzle(object):
 
                 real_x += 1
 
-    def __draw_marks(self):
+    def _draw_marks(self):
         for x in range(self.level.width):
             for y in range(self.level.height):
                 value = self.marks[x][y]
@@ -217,7 +217,7 @@ class KRPuzzle(object):
                     else:
                         self.__addchs(pos_y, pos_x, chars, curses.color_pair(3))
 
-    def __draw_status(self):
+    def _draw_status(self):
         # display the position of the cursor.
         cursor_pos = "%d x %d" % (self.cursor_pos[1] + 1, self.cursor_pos[0] + 1)
         cursor_pos = cursor_pos.ljust(7)
@@ -384,10 +384,6 @@ class KRPuzzle(object):
                     indices.add(mark_group_i)
 
         return indices
-
-    @staticmethod
-    def clamp(value, minimum, maximum):
-        return max(minimum, min(value, maximum))
 
 if __name__ == '__main__':
     if len(sys.argv) == 1:
