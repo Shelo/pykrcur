@@ -66,8 +66,7 @@ class KRPuzzle(object):
         curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
         curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_CYAN)
         curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_WHITE)
-        curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_RED)
-        curses.init_pair(5, curses.COLOR_BLACK, curses.COLOR_YELLOW)
+        curses.init_pair(4, curses.COLOR_BLACK, curses.COLOR_GREEN)
 
         # this block will always restore the terminal.
         try:
@@ -224,10 +223,9 @@ class KRPuzzle(object):
         cursor_pos = cursor_pos.ljust(7)
         self.__addchs(self.total_height - 1, self.level.left_margin * 3 + 1, cursor_pos, curses.A_NORMAL)
 
-        # display the dimension of the puzzle.
-        dimensions = "%d x %d" % (self.level.width, self.level.height)
-        dimensions = dimensions.rjust(7)
-        self.__addchs(self.total_height - 1, self.total_width - 9, dimensions, curses.A_BOLD)
+        # display id and dimension of the puzzle.
+        dimensions = "(%s) %d x %d" % (self.level.id, self.level.width, self.level.height)
+        self.__addchs(self.total_height - 1, self.total_width - len(dimensions) - 2, dimensions, curses.A_BOLD)
 
         # if the distance utility is on, display it.
         if self.count_distance:

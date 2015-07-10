@@ -1,19 +1,31 @@
 from os import listdir
 from os.path import isfile, join
-from src.main import KRPuzzle
+from src.puzzle import KRPuzzle
 from src.reader import Reader
+from random import choice
 
 DIRECTORY = "levels/"
-files = [f for f in listdir(DIRECTORY) if isfile(join(DIRECTORY, f)) and f.split('.')[-1] == 'krk']
+categories = [f for f in listdir(DIRECTORY) if not isfile(join(DIRECTORY, f))]
 
-for i, _file in enumerate(files):
-    print str(i) + ".", '.'.join(_file.split('.')[:-1]).capitalize()
+print "Categories:"
+print "  0. Exit"
+for i, _file in enumerate(categories):
+    print "  " + str(i + 1) + ".", _file
 
-puzzle = -1
-while puzzle < 0 or puzzle >= len(files):
-    puzzle = int(raw_input("Enter the puzzle number: "))
+print
 
-reader = Reader(join(DIRECTORY, files[puzzle]))
-puzzle = KRPuzzle(reader.get_level())
-puzzle.start()
-# puzzle.output()
+category = -1
+while category < 0 or category > len(categories):
+    category = int(raw_input("Enter the category number: "))
+
+if category != 0:
+    category -= 1
+    category_dir = join(DIRECTORY, categories[category])
+    cat_files = [f for f in listdir(category_dir) if isfile(join(category_dir, f))]
+
+    random_puzzle = choice(cat_files)
+
+    reader = Reader(join(category_dir, random_puzzle))
+    puzzle = KRPuzzle(reader.get_level())
+    puzzle.start()
+    # puzzle.output()

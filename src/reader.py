@@ -1,4 +1,5 @@
 from src.level import *
+from os.path import basename
 
 class Reader(object):
     def __init__(self, file_path):
@@ -57,7 +58,8 @@ class Reader(object):
                 self.left_margin = len(row)
 
     def get_level(self):
-        level = Level(self.width, self.top_margin, self.left_margin, self.height)
+        level_id = basename(self.file_path).replace('.krk', '')
+        level = Level(level_id, self.width, self.top_margin, self.left_margin, self.height)
 
         for y, row in enumerate(self.top):
             for x, number in enumerate(row):

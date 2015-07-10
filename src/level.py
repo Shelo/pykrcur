@@ -1,11 +1,12 @@
 import utils
 
 class Level(object):
-    def __init__(self, width, top_margin, left_margin, height):
+    def __init__(self, id, width, top_margin, left_margin, height):
         self.left_margin = left_margin
         self.top_margin = top_margin
         self.height = height
         self.width = width
+        self.id = id
 
         self.left = utils.new_matrix(left_margin, height, -1)
         self.top = utils.new_matrix(width, top_margin, -1)
