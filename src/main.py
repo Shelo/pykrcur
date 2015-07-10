@@ -20,6 +20,16 @@ class KRPuzzle(object):
         self.win = None
         self.out = ""
 
+        # dimensions.
+        self.total_height = 0
+        self.total_width = 0
+
+        # count the distance utility.
+        self.count_distance = False
+
+        # (y, x), only take in account the biggest one.
+        self.count_origin = (0, 0)
+
         # matrix for the marks on the puzzle.
         self.marks = utils.new_matrix(level.width, level.height, self.NULL)
 
@@ -41,15 +51,22 @@ class KRPuzzle(object):
         y = (max_height - self.level.height) / 2 - self.level.top_margin
         x = (max_width - self.level.width * 3) / 2 - self.level.left_margin * 3
 
+        # add two more lines to the height, so we can add status information.
+        height += 2
+
         # create window for the actual game.
         self.win = curses.newwin(height, width, y, x)
         self.win.keypad(True)
+
+        # save window dimensions.
+        self.total_height = height
+        self.total_width = width
 
         # setup theme.
         curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
         curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_CYAN)
         curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_WHITE)
-        curses.init_pair(4, curses.COLOR_BLACK, curses.COLOR_GREEN)
+        curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_RED)
         curses.init_pair(5, curses.COLOR_BLACK, curses.COLOR_YELLOW)
 
         # this block will always restore the terminal.
@@ -101,6 +118,10 @@ class KRPuzzle(object):
         elif char == ord('x'):
             self.discard(x, y)
 
+        elif char == ord('c'):
+            self.count_distance = not self.count_distance
+            self.count_origin = tuple(self.cursor_pos)
+
         x = self.clamp(x, 0, self.level.width - 1)
         y = self.clamp(y, 0, self.level.height - 1)
 
@@ -120,6 +141,7 @@ class KRPuzzle(object):
         self.__draw_top()
         self.__draw_left()
         self.__draw_marks()
+        self.__draw_status()
 
     def __draw_top(self):
         for x in range(self.level.width):
@@ -195,6 +217,36 @@ class KRPuzzle(object):
                         self.__addchs(pos_y, pos_x, chars, None)
                     else:
                         self.__addchs(pos_y, pos_x, chars, curses.color_pair(3))
+
+    def __draw_status(self):
+        # display the position of the cursor.
+        cursor_pos = "%d x %d" % (self.cursor_pos[1] + 1, self.cursor_pos[0] + 1)
+        cursor_pos = cursor_pos.ljust(7)
+        self.__addchs(self.total_height - 1, self.level.left_margin * 3 + 1, cursor_pos, curses.A_NORMAL)
+
+        # display the dimension of the puzzle.
+        dimensions = "%d x %d" % (self.level.width, self.level.height)
+        dimensions = dimensions.rjust(7)
+        self.__addchs(self.total_height - 1, self.total_width - 9, dimensions, curses.A_BOLD)
+
+        # if the distance utility is on, display it.
+        if self.count_distance:
+            origin_y, origin_x = self.count_origin
+            cursor_y, cursor_x = self.cursor_pos
+            d_x = abs(cursor_x - origin_x)
+            d_y = abs(cursor_y - origin_y)
+
+            if d_x > d_y:
+                distance = "[%d]" % (d_x + 1)
+            else:
+                distance = "[%d]" % (d_y + 1)
+
+            distance = distance.center(4)
+            self.__addchs(self.total_height - 1, self.level.left_margin * 3 + (self.level.width * 3 - 4) / 2,
+                          distance, curses.A_BOLD)
+        else:
+            self.__addchs(self.total_height - 1, self.level.left_margin * 3 + (self.level.width * 3 - 4) / 2,
+                          ' ' * 4, curses.A_NORMAL)
 
     def __addchs(self, y, x, chs, style):
         """

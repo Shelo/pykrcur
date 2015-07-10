@@ -16,4 +16,4 @@ while puzzle < 0 or puzzle >= len(files):
 reader = Reader(join(DIRECTORY, files[puzzle]))
 puzzle = KRPuzzle(reader.get_level())
 puzzle.start()
-puzzle.output()
+# puzzle.output()
