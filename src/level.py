@@ -11,11 +11,25 @@ class Level(object):
         self.left = utils.new_matrix(left_margin, height, -1)
         self.top = utils.new_matrix(width, top_margin, -1)
 
+    def clear_row(self, y):
+        for i in range(self.left_margin):
+            self.left[i][y] = -1
+
+    def clear_col(self, x):
+        for i in range(self.top_margin):
+            self.top[x][i] = -1
+
     def add_to_top(self, x, y, value):
         self.top[x][y] = value
 
     def add_to_left(self, x, y, value):
         self.left[x][y] = value
+
+    def get_top_at(self, x, y):
+        return self.top[x][y]
+
+    def get_left_at(self, x, y):
+        return self.left[x][y]
 
     def size(self):
         """

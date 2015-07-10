@@ -1,5 +1,6 @@
 import curses
 import sys
+import traceback
 import utils
 
 from src.reader import Reader
@@ -15,10 +16,12 @@ class KRPuzzle(object):
 
         # position of the cursor (y, x)
         self.cursor_pos = (0, 0)
+        self.allow_help = True
         self.master = None
         self.daemon = True
         self.win = None
         self.out = ""
+        self.exception = None
 
         # dimensions.
         self.total_height = 0
@@ -72,7 +75,7 @@ class KRPuzzle(object):
         try:
             self.__mainloop()
         except Exception as e:
-            print e.message
+            self.exception = (e, sys.exc_info())
         finally:
             self.end()
 
@@ -137,6 +140,7 @@ class KRPuzzle(object):
         self.win.move(y + self.level.top_margin, (x + self.level.left_margin) * 3 + 1)
 
     def render(self):
+        self.win.clear()
         self._draw_top()
         self._draw_left()
         self._draw_marks()
@@ -144,7 +148,8 @@ class KRPuzzle(object):
 
     def _draw_top(self):
         for x in range(self.level.width):
-            complete_indices = self.get_completed_indices(self.level.get_col(x), *self.get_marks_col(x))
+            if self.allow_help:
+                complete_indices = self.get_completed_indices(self.level.get_col(x), *self.get_marks_col(x))
 
             # iterate over every column, always tracking the actual index of the value (real_y).
             real_y = 0
@@ -156,22 +161,22 @@ class KRPuzzle(object):
                 attributes = curses.A_NORMAL
 
                 # add style if completed.
-                if real_y in complete_indices:
+                if self.allow_help and real_y in complete_indices:
                     attributes |= curses.color_pair(4)
 
                 str_value = str(value).center(3, ' ')
-                if x == self.cursor_pos[1]:
-                    # draw with other style if the cursor is in this column.
-                    self.__addchs(y, (self.level.left_margin + x) * 3, str_value, attributes | curses.A_BOLD)
 
-                else:
-                    self.__addchs(y, (self.level.left_margin + x) * 3, str_value, attributes)
+                if x == self.cursor_pos[1]:
+                    attributes |= curses.A_BOLD
+
+                self.__addchs(y, (self.level.left_margin + x) * 3, str_value, attributes)
 
                 real_y += 1
 
     def _draw_left(self):
         for y in range(self.level.height):
-            complete_indices = self.get_completed_indices(self.level.get_row(y), *self.get_marks_row(y))
+            if self.allow_help:
+                complete_indices = self.get_completed_indices(self.level.get_row(y), *self.get_marks_row(y))
 
             # iterate over every column, always tracking the actual index of the value (real_x).
             real_x = 0
@@ -186,13 +191,13 @@ class KRPuzzle(object):
                 attributes = curses.A_NORMAL
 
                 # add underline if completed.
-                if real_x in complete_indices:
+                if self.allow_help and real_x in complete_indices:
                     attributes |= curses.color_pair(4)
 
                 if y == self.cursor_pos[0]:
-                    self.__addchs(self.level.top_margin + y, x * 3, str_value, attributes | curses.A_BOLD)
-                else:
-                    self.__addchs(self.level.top_margin + y, x * 3, str_value, attributes)
+                    attributes |= curses.A_BOLD
+
+                self.__addchs(self.level.top_margin + y, x * 3, str_value, attributes)
 
                 real_x += 1
 
@@ -336,9 +341,12 @@ class KRPuzzle(object):
     def log(self, message):
         self.out += "%s\n" % message
 
-    @staticmethod
-    def end():
+    def end(self):
         curses.endwin()
+
+        if self.exception:
+            e, tb = self.exception
+            traceback.print_exception(type(e), e, tb[2])
 
     def output(self):
         print "----------- OUTPUT ------------"
@@ -348,6 +356,9 @@ class KRPuzzle(object):
     def get_completed_indices(self, row, types, groups):
         indices = set()
         used_groups = set()
+
+        if row[0] == 0 and types.count(self.MARK) == 0:
+            return [0]
 
         # first, try from the left to the right.
         mark_group_i = -1
