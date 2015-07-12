@@ -32,5 +32,11 @@ if category != 0:
 
     reader = Reader(join(category_dir, random_puzzle))
     puzzle = KRPuzzle(reader.get_level())
-    puzzle.start()
+
+    try:
+        puzzle.start()
+    except Exception as e:
+        print e.message
+        puzzle.end()
+
     # puzzle.output()

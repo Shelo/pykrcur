@@ -1,6 +1,5 @@
 import curses
 import sys
-import traceback
 import utils
 
 from src.reader import Reader
@@ -21,7 +20,6 @@ class KRPuzzle(object):
         self.daemon = True
         self.win = None
         self.out = ""
-        self.exception = None
 
         # dimensions.
         self.total_height = 0
@@ -65,19 +63,21 @@ class KRPuzzle(object):
         self.total_height = height
         self.total_width = width
 
-        # setup theme.
+        # Setup theme.
+        # marked.
         curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)
-        curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_CYAN)
-        curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_WHITE)
-        curses.init_pair(4, curses.COLOR_BLACK, curses.COLOR_GREEN)
 
-        # this block will always restore the terminal.
-        try:
-            self.__mainloop()
-        except Exception as e:
-            self.exception = (e, sys.exc_info())
-        finally:
-            self.end()
+        # discarded.
+        curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_CYAN)
+
+        # board.
+        curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_WHITE)
+
+        # completed number.
+        curses.init_pair(4, curses.COLOR_WHITE, -1)
+
+        self.__mainloop()
+        self.end()
 
     def __mainloop(self):
         while self.daemon:
@@ -148,8 +148,11 @@ class KRPuzzle(object):
 
     def _draw_top(self):
         for x in range(self.level.width):
+
             if self.allow_help:
                 complete_indices = self.get_completed_indices(self.level.get_col(x), *self.get_marks_col(x))
+            else:
+                complete_indices = []
 
             # iterate over every column, always tracking the actual index of the value (real_y).
             real_y = 0
@@ -161,7 +164,7 @@ class KRPuzzle(object):
                 attributes = curses.A_NORMAL
 
                 # add style if completed.
-                if self.allow_help and real_y in complete_indices:
+                if real_y in complete_indices:
                     attributes |= curses.color_pair(4)
 
                 str_value = str(value).center(3, ' ')
@@ -177,6 +180,8 @@ class KRPuzzle(object):
         for y in range(self.level.height):
             if self.allow_help:
                 complete_indices = self.get_completed_indices(self.level.get_row(y), *self.get_marks_row(y))
+            else:
+                complete_indices = []
 
             # iterate over every column, always tracking the actual index of the value (real_x).
             real_x = 0
@@ -191,7 +196,7 @@ class KRPuzzle(object):
                 attributes = curses.A_NORMAL
 
                 # add underline if completed.
-                if self.allow_help and real_x in complete_indices:
+                if real_x in complete_indices:
                     attributes |= curses.color_pair(4)
 
                 if y == self.cursor_pos[0]:
@@ -343,11 +348,6 @@ class KRPuzzle(object):
 
     def end(self):
         curses.endwin()
-
-        if self.exception:
-            e, tb = self.exception
-            traceback.print_exception(type(e), e, tb[2])
-
     def output(self):
         print "----------- OUTPUT ------------"
         print self.out[:-1]
